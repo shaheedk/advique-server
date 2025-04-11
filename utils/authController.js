@@ -2,6 +2,8 @@ import nodemailer from 'nodemailer';
 import userModel from '../models/userModel.js';
 import jwt from 'jsonwebtoken';
 import otpModel from '../models/otpModel.js';
+import bcrypt from 'bcrypt';
+
 // Nodemailer transporter
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -18,7 +20,7 @@ function generateOtp() {
   return { otp, expiresAt };
 }
 
-
+// Send OTP
 const sendOtp = async (req, res) => {
   try {
     const { email, name, password } = req.body;
@@ -28,7 +30,6 @@ const sendOtp = async (req, res) => {
 
     const { otp, expiresAt } = generateOtp();
 
-   
     await otpModel.findOneAndUpdate(
       { email },
       { otp, otpExpires: expiresAt, name, password },
@@ -42,14 +43,14 @@ const sendOtp = async (req, res) => {
       text: `Your OTP is ${otp}. It will expire in 5 minutes.`,
     });
 
-    res.status(200).json({ message: "OTP sent successfully" });
-
+    return res.status(200).json({ success: true, message: "OTP sent successfully" });
   } catch (error) {
     console.error('Error sending OTP:', error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
 
+// Verify OTP
 const verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -58,7 +59,9 @@ const verifyOtp = async (req, res) => {
     }
 
     const record = await otpModel.findOne({ email });
-    if (!record) return res.status(404).json({ success: false, message: "OTP not found" });
+    if (!record) {
+      return res.status(404).json({ success: false, message: "OTP not found" });
+    }
 
     if (record.otp !== Number(otp)) {
       return res.status(400).json({ success: false, message: "Incorrect OTP" });
@@ -68,18 +71,21 @@ const verifyOtp = async (req, res) => {
       return res.status(400).json({ success: false, message: "OTP expired" });
     }
 
-    // If user doesn't exist, create from record
     let user = await userModel.findOne({ email });
     if (!user) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(record.password, salt);
+      console.log("Hashed password saved:", hashedPassword); // Debug
       user = new userModel({
         email,
         name: record.name,
-        password: record.password,
+        password: hashedPassword,
+        
       });
       await user.save();
     }
 
-    await otpModel.deleteOne({ email }); // Remove OTP record after success
+    await otpModel.deleteOne({ email });
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
 
@@ -88,12 +94,10 @@ const verifyOtp = async (req, res) => {
       token,
       user: { name: user.name, email: user.email },
     });
-
   } catch (error) {
     console.error('Error verifying OTP:', error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
-
 
 export { sendOtp, verifyOtp };
