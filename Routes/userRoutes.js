@@ -3,7 +3,6 @@ import express from "express";
 import { registerUser, loginUser, logoutUser } from "../controllers/userController.js";
 import { sendOtp, verifyOtp } from "../utils/authController.js";
 import userAuth from "../middlewares/Auth.js";
-import { generateContent } from "../services/geminiChatService.js";
 const router = express.Router();
 
 router.post("/register", registerUser);
@@ -14,6 +13,6 @@ router.post("/verify-otp", verifyOtp);
 router.get("/userdata", userAuth, async (req, res) => {
     res.status(200).json(req.user); 
   });
-  router.post("/generate", userAuth, generateContent); 
+
 
 export default router;

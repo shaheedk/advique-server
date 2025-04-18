@@ -1,26 +1,30 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv';
-import bcrypt from 'bcrypt'
+import chatRoutes from './Routes/chatRouter.js'
 import connectDb from './config/db/mondodb.js'
 import userRouter from './Routes/userRoutes.js'
 
-const PORT =process.env.PORT||2000
-const app=express()
-await connectDb()
-dotenv.config();
-app.use(express.json())
+dotenv.config(); // move this to top if not already
+
+const PORT = process.env.PORT || 2000;
+const app = express();
+
+await connectDb();
+app.use(express.json());
 app.use(cors({
     origin: "http://localhost:5173", 
     credentials: true,
-  }));
+}));
 
-app.use('/api/user',userRouter)
+// Your routes
+app.use('/api/user', userRouter);
+app.use('/api/chat', chatRoutes);
 
-app.get('/',(req,res)=>{
-    res.send('api working')
+app.get('/', (req, res) => {
+    res.send('api working');
+});
 
-})
-app.listen(PORT,()=>{
-    console.log('server is run on http://localhost:'+PORT)
-})
+app.listen(PORT, () => {
+    console.log('server is run on http://localhost:' + PORT);
+});
