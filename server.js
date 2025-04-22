@@ -12,7 +12,10 @@ const app = express();
 
 await connectDb();
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+    origin: "https://advique.vercel.app/", 
+    credentials: true,
+}));
 
 // Your routes
 app.use('/api/user', userRouter);
